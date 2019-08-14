@@ -193,7 +193,13 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        prev_dim = input_dim
+        for idx, hidden_dim in enumerate(hidden_dims):
+            self.params["W%d" % (idx + 1)] = weight_scale * np.random.randn(prev_dim, hidden_dim)
+            self.params["b%d" % (idx + 1)] = np.zeros(hidden_dim)
+            prev_dim = hidden_dim
+        self.params["W%d" % self.num_layers] = weight_scale * np.random.randn(prev_dim, num_classes)
+        self.params["b%d" % self.num_layers] = np.zeros(num_classes)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -256,7 +262,11 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        scores = X
+        caches = [None] * self.num_layers
+        for idx in range(self.num_layers - 1):
+            scores, caches[idx] = affine_relu_forward(scores, self.params["W%d" % (idx + 1)], self.params["b%d" % (idx + 1)])
+        scores, caches[self.num_layers - 1] = affine_forward(scores, self.params["W%d" % self.num_layers], self.params["b%d" % self.num_layers])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -283,7 +293,18 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss, dL = softmax_loss(scores, y)
+
+        loss += 0.5 * self.reg * np.sum(self.params["W%d" % self.num_layers] ** 2)
+        dx, dw, db = affine_backward(dL, caches[self.num_layers - 1])
+        grads["W%d" % self.num_layers] = dw
+        grads["b%d" % self.num_layers] = db
+
+        for idx in reversed(range(self.num_layers - 1)):
+            loss += 0.5 * self.reg * np.sum(self.params["W%d" % (idx + 1)] ** 2)
+            dx, dw, db = affine_relu_backward(dx, caches[idx])
+            grads["W%d" % (idx + 1)] = dw
+            grads["b%d" % (idx + 1)] = db
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
