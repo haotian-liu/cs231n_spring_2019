@@ -297,12 +297,14 @@ class FullyConnectedNet(object):
 
         loss += 0.5 * self.reg * np.sum(self.params["W%d" % self.num_layers] ** 2)
         dx, dw, db = affine_backward(dL, caches[self.num_layers - 1])
+        dw += self.reg * self.params["W%d" % self.num_layers]
         grads["W%d" % self.num_layers] = dw
         grads["b%d" % self.num_layers] = db
 
         for idx in reversed(range(self.num_layers - 1)):
             loss += 0.5 * self.reg * np.sum(self.params["W%d" % (idx + 1)] ** 2)
             dx, dw, db = affine_relu_backward(dx, caches[idx])
+            dw += self.reg * self.params["W%d" % (idx + 1)]
             grads["W%d" % (idx + 1)] = dw
             grads["b%d" % (idx + 1)] = db
 
