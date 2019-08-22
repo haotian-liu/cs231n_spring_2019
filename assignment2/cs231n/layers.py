@@ -222,7 +222,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        x_norm = (x - running_mean) / np.sqrt(running_var ** 2 + eps)
+        x_norm = (x - running_mean) / np.sqrt(running_var + eps)
         out = gamma * x_norm + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
