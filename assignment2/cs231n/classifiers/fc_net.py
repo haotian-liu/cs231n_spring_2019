@@ -197,7 +197,7 @@ class FullyConnectedNet(object):
         for idx, hidden_dim in enumerate(hidden_dims):
             self.params["W%d" % (idx + 1)] = weight_scale * np.random.randn(prev_dim, hidden_dim)
             self.params["b%d" % (idx + 1)] = np.zeros(hidden_dim)
-            if self.normalization=='batchnorm':
+            if self.normalization in ('batchnorm', 'layernorm'):
                 self.params["gamma%d" % (idx + 1)] = np.ones(hidden_dim)
                 self.params["beta%d" % (idx + 1)] = np.zeros(hidden_dim)
             prev_dim = hidden_dim
@@ -269,10 +269,15 @@ class FullyConnectedNet(object):
         caches = [None] * self.num_layers
 
         for idx in range(1, self.num_layers):
-            if self.normalization == 'batchnorm':
-                scores, caches[idx - 1] = affine_bn_relu_forward(scores,
-                    self.params["W%d" % idx], self.params["b%d" % idx],
-                    self.params["gamma%d" % idx], self.params["beta%d" % idx], self.bn_params[idx - 1])
+            if self.normalization in ('batchnorm', 'layernorm'):
+                a, fc_cache = affine_forward(scores, self.params["W%d" % idx], self.params["b%d" % idx])
+                an, bn_cache = batchnorm_forward(a, self.params["gamma%d" % idx], self.params["beta%d" % idx], self.bn_params[idx - 1])
+                scores, relu_cache = relu_forward(an)
+                caches[idx - 1] = (fc_cache, bn_cache, relu_cache)
+
+                # scores, caches[idx - 1] = affine_bn_relu_forward(scores,
+                #     self.params["W%d" % idx], self.params["b%d" % idx],
+                #     self.params["gamma%d" % idx], self.params["beta%d" % idx], self.bn_params[idx - 1])
             else:
                 scores, caches[idx - 1] = affine_relu_forward(scores, self.params["W%d" % idx], self.params["b%d" % idx])
         scores, caches[self.num_layers - 1] = affine_forward(scores, self.params["W%d" % self.num_layers], self.params["b%d" % self.num_layers])
@@ -313,7 +318,12 @@ class FullyConnectedNet(object):
         for idx in reversed(range(1, self.num_layers)):
             loss += 0.5 * self.reg * np.sum(self.params["W%d" % idx] ** 2)
             if self.normalization == 'batchnorm':
-                dx, dw, db, dgamma, dbeta = affine_bn_relu_backward(dx, caches[idx - 1])
+                # dx, dw, db, dgamma, dbeta = affine_bn_relu_backward(dx, caches[idx - 1])
+                fc_cache, bn_cache, relu_cache = caches[idx - 1]
+                dan = relu_backward(dx, relu_cache)
+                da, dgamma, dbeta = batchnorm_backward_alt(dan, bn_cache)
+                dx, dw, db = affine_backward(da, fc_cache)
+
                 grads["gamma%d" % idx] = dgamma
                 grads["beta%d" % idx] = dbeta
             else:
