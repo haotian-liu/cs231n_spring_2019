@@ -377,7 +377,14 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mu = np.mean(x, axis=1, keepdims=True)
+    x_center = x - mu
+    var = np.mean(x_center ** 2, axis=1, keepdims=True)
+    std = np.sqrt(var + eps)
+    inv_std = 1 / std
+    x_norm = x_center * inv_std
+    out = gamma * x_norm + beta
+    cache = mu, x_center, var, std, inv_std, x_norm, x, gamma, beta, eps
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -412,7 +419,24 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mu, x_center, var, std, inv_std, x_norm, x, gamma, beta, eps = cache
+    N, D = x.shape
+
+    dgamma = np.sum(dout * x_norm, axis=0)
+    dbeta = np.sum(dout, axis=0)
+    dx_norm = dout * gamma
+
+    dx_center_x_norm = dx_norm * inv_std
+    dinv_std = np.sum(dx_norm * x_center, axis=1, keepdims=True)
+    dstd = dinv_std * (-1 / std ** 2)
+
+    dvar = dstd / (2 * std)
+    dx_center_var = dvar * 2 * x_center / D
+    dx_center = dx_center_x_norm + dx_center_var
+    dx_x_center = dx_center
+    dmu = -np.sum(dx_center, axis=1, keepdims=True)
+    dx_mu = dmu * np.ones_like(x) / D
+    dx = dx_x_center + dx_mu
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
