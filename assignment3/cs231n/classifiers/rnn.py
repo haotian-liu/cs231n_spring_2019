@@ -142,7 +142,31 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        features_hidden, affine_cache = affine_forward(features, W_proj, b_proj)
+        captions_embedding, embedding_cache = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == "rnn":
+            captions_hidden, cell_cache = rnn_forward(captions_embedding, features_hidden, Wx, Wh, b)
+        else:
+            raise "Not implemented cell_type %s" % self.cell_type
+        predictions, temporal_affine_cache = temporal_affine_forward(captions_hidden, W_vocab, b_vocab)
+        loss, dx_softmax = temporal_softmax_loss(predictions, captions_out, mask)
+
+        d_captions_hidden, dW_vocab, db_vocab = temporal_affine_backward(dx_softmax, temporal_affine_cache)
+        if self.cell_type == "rnn":
+            d_captions_embedding, d_features_hidden, dWx, dWh, db = rnn_backward(d_captions_hidden, cell_cache)
+        else:
+            raise "Not implemented cell_type %s" % self.cell_type
+
+        dW_embed = word_embedding_backward(d_captions_embedding, embedding_cache)
+        _, dW_proj, db_proj = affine_backward(d_features_hidden, affine_cache)
+
+        grads['W_proj'], grads['b_proj'] = dW_proj, db_proj
+
+        grads['W_embed'] = dW_embed
+
+        grads['Wx'], grads['Wh'], grads['b'] = dWx, dWh, db
+
+        grads['W_vocab'], grads['b_vocab'] = dW_vocab, db_vocab
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -211,7 +235,19 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        features_hidden, _ = affine_forward(features, W_proj, b_proj)
+        hidden_state = features_hidden
+        start_captions = self._start * np.ones((N, 1), dtype=np.int32)
+        start_token, _ = word_embedding_forward(start_captions, W_embed)
+        start_token = start_token[:, 0, :]
+
+        for i in range(max_length):
+            if self.cell_type == "rnn":
+                hidden_state, _ = rnn_step_forward(start_token, hidden_state, Wx, Wh, b)
+            else:
+                raise "Not implemented cell_type %s" % self.cell_type
+            predictions, _ = temporal_affine_forward(np.expand_dims(hidden_state, axis=1), W_vocab, b_vocab)
+            captions[:, i] = predictions.squeeze().argmax(axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
