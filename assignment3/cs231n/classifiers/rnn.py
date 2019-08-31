@@ -146,16 +146,20 @@ class CaptioningRNN(object):
         captions_embedding, embedding_cache = word_embedding_forward(captions_in, W_embed)
         if self.cell_type == "rnn":
             captions_hidden, cell_cache = rnn_forward(captions_embedding, features_hidden, Wx, Wh, b)
+        elif self.cell_type == "lstm":
+            captions_hidden, cell_cache = lstm_forward(captions_embedding, features_hidden, Wx, Wh, b)
         else:
-            raise "Not implemented cell_type %s" % self.cell_type
+            raise Exception("Not implemented cell_type %s" % self.cell_type)
         predictions, temporal_affine_cache = temporal_affine_forward(captions_hidden, W_vocab, b_vocab)
         loss, dx_softmax = temporal_softmax_loss(predictions, captions_out, mask)
 
         d_captions_hidden, dW_vocab, db_vocab = temporal_affine_backward(dx_softmax, temporal_affine_cache)
         if self.cell_type == "rnn":
             d_captions_embedding, d_features_hidden, dWx, dWh, db = rnn_backward(d_captions_hidden, cell_cache)
+        elif self.cell_type == "lstm":
+            d_captions_embedding, d_features_hidden, dWx, dWh, db = lstm_backward(d_captions_hidden, cell_cache)
         else:
-            raise "Not implemented cell_type %s" % self.cell_type
+            raise Exception("Not implemented cell_type %s" % self.cell_type)
 
         dW_embed = word_embedding_backward(d_captions_embedding, embedding_cache)
         _, dW_proj, db_proj = affine_backward(d_features_hidden, affine_cache)
@@ -237,6 +241,8 @@ class CaptioningRNN(object):
 
         features_hidden, _ = affine_forward(features, W_proj, b_proj)
         hidden_state = features_hidden
+        H = Wh.shape[0]
+        cell_state = np.zeros((N, H))
         start_captions = self._start * np.ones((N, 1), dtype=np.int32)
         start_token, _ = word_embedding_forward(start_captions, W_embed)
         start_token = start_token[:, 0, :]
@@ -244,6 +250,8 @@ class CaptioningRNN(object):
         for i in range(max_length):
             if self.cell_type == "rnn":
                 hidden_state, _ = rnn_step_forward(start_token, hidden_state, Wx, Wh, b)
+            elif self.cell_type == "lstm":
+                hidden_state, cell_state, _ = lstm_step_forward(start_token, hidden_state, cell_state, Wx, Wh, b)
             else:
                 raise "Not implemented cell_type %s" % self.cell_type
             predictions, _ = temporal_affine_forward(np.expand_dims(hidden_state, axis=1), W_vocab, b_vocab)
