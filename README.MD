@@ -6,9 +6,9 @@ My solutions to CS231n assignments, implemented for both local runtime, and clou
 
 
 
-For assignment1, solutions are named with prefixes ([aistudio](https://aistudio.baidu.com), [colab](https://colab.research.google.com)), indicating the platform where the code was built and tested.
+For assignment1, solutions are named with prefixes (<a href="https://aistudio.baidu.com" target="_blank">aistudio</a>, <a href="https://colab.research.google.com" target="_blank">colab</a>), indicating the platform where the code was built and tested.
 
-For assignment2 and assignment3, solutions are all built and tested on [Google Colab Platform](https://colab.research.google.com). 
+For assignment2 and assignment3, solutions are all built and tested on <a href="https://colab.research.google.com" target="_blank">Google Colab Platform</a>. 
 
 
 
